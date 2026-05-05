@@ -35,7 +35,7 @@ export default function Login() {
         <div className="w-full max-w-md bg-background border border-border rounded-2xl shadow-[var(--shadow-soft)] p-8">
           <h1 className="text-2xl font-bold text-[hsl(var(--primary-dark))]">Entrar</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Acesse sua conta no Portal Constrói Vínculo
+            Acesse sua conta no Portal ConscienteLar
           </p>
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div>

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Heart, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -15,24 +15,19 @@ export default function AppHeader() {
     ? []
     : isVolunteer
       ? [
-          { to: "/dashboard-voluntario", label: "Dashboard" },
-          { to: "/criar-curso", label: "Criar Curso" },
-        ]
+        { to: "/dashboard-voluntario", label: "Dashboard" },
+        { to: "/criar-curso", label: "Criar Curso" },
+      ]
       : [
-          { to: "/catalogo", label: "Catálogo" },
-          { to: "/meus-cursos", label: "Meus Cursos" },
-        ];
+        { to: "/catalogo", label: "Catálogo" },
+        { to: "/meus-cursos", label: "Meus Cursos" },
+      ];
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur shadow-[var(--shadow-card)]">
       <div className="container flex h-16 items-center justify-between">
         <Link to={home} className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Heart className="h-5 w-5" fill="currentColor" />
-          </span>
-          <span className="text-lg font-bold text-[hsl(var(--primary-dark))]">
-            Constrói Vínculo
-          </span>
+          <img src="/conscientelar.png" alt="ConscienteLar" className="h-400 w-40 rounded-lg" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -40,11 +35,10 @@ export default function AppHeader() {
             <Link
               key={l.to}
               to={l.to}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                loc.pathname === l.to
-                  ? "bg-secondary text-[hsl(var(--primary-dark))]"
-                  : "text-muted-foreground hover:bg-secondary hover:text-[hsl(var(--primary-dark))]"
-              }`}
+              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${loc.pathname === l.to
+                ? "bg-secondary text-[hsl(var(--primary-dark))]"
+                : "text-muted-foreground hover:bg-secondary hover:text-[hsl(var(--primary-dark))]"
+                }`}
             >
               {l.label}
             </Link>
