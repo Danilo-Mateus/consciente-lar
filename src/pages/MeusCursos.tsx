@@ -3,14 +3,15 @@ import { Link } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockDb, Enrollment, Course } from "@/lib/mockDb";
+import { Enrollment } from "@/utils/supabase";
+import { myEnrollments } from "@/services/courses";
 
 export default function MeusCursos() {
   const { profile } = useAuth();
-  const [items, setItems] = useState<(Enrollment & { course: Course })[]>([]);
+  const [items, setItems] = useState<Enrollment[]>([]);
 
   useEffect(() => {
-    if (profile) setItems(mockDb.myEnrollments(profile.id));
+    if (profile) myEnrollments(profile.id).then(setItems).catch(() => setItems([]));
   }, [profile]);
 
   return (
@@ -38,10 +39,10 @@ export default function MeusCursos() {
               >
                 <div>
                   <span className="inline-block text-xs font-medium px-2 py-1 rounded-md bg-secondary text-[hsl(var(--primary-dark))]">
-                    {e.course.category}
+                    {e.course?.category}
                   </span>
                   <h3 className="mt-2 font-semibold text-[hsl(var(--primary-dark))]">
-                    {e.course.title}
+                    {e.course?.title}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-1">
                     Inscrito em{" "}
@@ -49,7 +50,7 @@ export default function MeusCursos() {
                   </p>
                 </div>
                 <Button variant="outline" asChild>
-                  <Link to={`/curso/${e.course.id}`}>Ver Curso</Link>
+                  <Link to={`/curso/${e.course_id}`}>Ver Curso</Link>
                 </Button>
               </div>
             ))}
