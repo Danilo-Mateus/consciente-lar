@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import AppHeader from "@/components/AppHeader";
 import {
@@ -8,7 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Category, mockDb } from "@/lib/mockDb";
+import { Category } from "@/utils/supabase";
+import { listCourses } from "@/services/courses";
+import type { Course } from "@/utils/supabase";
 
 const CATEGORIES: (Category | "all")[] = [
   "all",
@@ -20,7 +22,11 @@ const CATEGORIES: (Category | "all")[] = [
 
 export default function Catalogo() {
   const [filter, setFilter] = useState<Category | "all">("all");
-  const courses = useMemo(() => mockDb.listCourses(filter), [filter]);
+  const [courses, setCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    listCourses(filter).then(setCourses).catch(() => setCourses([]));
+  }, [filter]);
 
   return (
     <div className="min-h-screen flex flex-col">

@@ -1,19 +1,7 @@
-// src/contexts/AuthContext.tsx
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { supabase } from "@/utils/supabase";
-import { User } from "@supabase/supabase-js";
+import { supabase, Profile } from "@/utils/supabase";
 
-// Interfaces alinhadas com o mockDb
-export interface Profile {
-  id: string;
-  email: string;
-  full_name: string;
-  user_type: "volunteer" | "aluno";
-  cpf: string;
-  specialty?: string;
-  institution_id?: number;
-  created_at: string;
-}
+export type { Profile };
 
 export interface SignUpInput {
   email: string;

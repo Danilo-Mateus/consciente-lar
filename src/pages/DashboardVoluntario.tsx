@@ -4,14 +4,15 @@ import { Plus, BookOpen } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockDb, Course } from "@/lib/mockDb";
+import { Course } from "@/utils/supabase";
+import { myCourses } from "@/services/courses";
 
 export default function DashboardVoluntario() {
   const { profile } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
-    if (profile) setCourses(mockDb.myCourses(profile.id));
+    if (profile) myCourses(profile.id).then(setCourses).catch(() => setCourses([]));
   }, [profile]);
 
   return (

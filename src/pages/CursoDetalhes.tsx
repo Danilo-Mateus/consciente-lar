@@ -1,22 +1,38 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Flag, MessageSquare } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import StarRating from "@/components/StarRating";
 import { useAuth } from "@/contexts/AuthContext";
-import { mockDb } from "@/lib/mockDb";
+import { Course, Comment } from "@/utils/supabase";
+import {
+  addComment,
+  enroll,
+  getCourse,
+  getRatings,
+  isEnrolled,
+  listComments,
+  rateCourse,
+  reportCourse,
+} from "@/services/courses";
 
 function toEmbed(url: string) {
-  // Convert common YouTube URLs to embed form
   try {
     const u = new URL(url);
-    if (u.hostname.includes("youtube.com") && u.searchParams.get("v")) {
+    if (u.hostname.includes("youtube.com") && u.searchParams.get("v"))
       return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
-    }
-    if (u.hostname === "youtu.be") {
-      return `https://www.youtube.com/embed${u.pathname}`;
-    }
+    if (u.hostname === "youtu.be") return `https://www.youtube.com/embed${u.pathname}`;
     return url;
   } catch {
     return url;
@@ -27,19 +43,37 @@ export default function CursoDetalhes() {
   const { id } = useParams();
   const { profile } = useAuth();
   const courseId = Number(id);
-  const course = mockDb.getCourse(courseId);
+  const [course, setCourse] = useState<Course | null>(null);
   const [enrolled, setEnrolled] = useState(false);
+  const [rating, setRating] = useState<{ avg: number; count: number; mine?: number }>({
+    avg: 0,
+    count: 0,
+  });
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [reportReason, setReportReason] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const refresh = async () => {
+    const c = await getCourse(courseId);
+    setCourse(c);
+    if (profile) setEnrolled(await isEnrolled(profile.id, courseId));
+    setRating(await getRatings(courseId));
+    setComments(await listComments(courseId));
+  };
 
   useEffect(() => {
-    if (profile && course) setEnrolled(mockDb.isEnrolled(profile.id, course.id));
-  }, [profile, course]);
+    if (!Number.isFinite(courseId)) return;
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [courseId, profile?.id]);
 
   if (!course) {
     return (
       <div className="min-h-screen flex flex-col">
         <AppHeader />
         <main className="flex-1 container py-12 text-center">
-          <p className="text-muted-foreground">Curso não encontrado.</p>
+          <p className="text-muted-foreground">Carregando curso...</p>
           <Button className="mt-4" asChild>
             <Link to="/catalogo">Voltar ao catálogo</Link>
           </Button>
@@ -48,14 +82,52 @@ export default function CursoDetalhes() {
     );
   }
 
-  const isOwner =
-    profile?.user_type === "volunteer" && profile.id === course.volunteer_id;
+  const isOwner = profile?.user_type === "volunteer" && profile.id === course.volunteer_id;
   const isAluno = profile?.user_type === "aluno";
 
-  const handleEnroll = () => {
-    mockDb.enroll(profile!.id, course.id);
-    setEnrolled(true);
-    toast.success("Inscrição realizada com sucesso!");
+  const handleEnroll = async () => {
+    try {
+      await enroll(profile!.id, course.id);
+      setEnrolled(true);
+      toast.success("Inscrição realizada com sucesso!");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const handleRate = async (stars: number) => {
+    try {
+      await rateCourse(profile!.id, course.id, stars);
+      toast.success("Avaliação enviada!");
+      setRating(await getRatings(course.id));
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const handleComment = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    try {
+      await addComment(profile!.id, course.id, newComment.trim());
+      setNewComment("");
+      setComments(await listComments(course.id));
+      toast.success("Comentário publicado!");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const handleReport = async () => {
+    if (!reportReason.trim()) return toast.error("Descreva o motivo do reporte.");
+    try {
+      await reportCourse(profile!.id, course.id, reportReason.trim());
+      toast.success("Reporte enviado. Obrigado!");
+      setReportReason("");
+      setReportOpen(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
   };
 
   const materials = (course.extra_material || "")
@@ -67,18 +139,55 @@ export default function CursoDetalhes() {
     <div className="min-h-screen flex flex-col">
       <AppHeader />
       <main className="flex-1 container py-10 max-w-4xl">
-        <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md bg-secondary text-[hsl(var(--primary-dark))]">
-          {course.category}
-        </span>
-        <h1 className="mt-3 text-3xl md:text-4xl font-bold text-[hsl(var(--primary-dark))]">
-          {course.title}
-        </h1>
-        <div className="mt-3 text-sm text-muted-foreground">
-          Por{" "}
-          <span className="font-medium text-[hsl(var(--primary-dark))]">
-            {course.volunteer?.full_name}
-          </span>{" "}
-          · {course.volunteer?.specialty}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <span className="inline-block text-xs font-medium px-2.5 py-1 rounded-md bg-secondary text-[hsl(var(--primary-dark))]">
+              {course.category}
+            </span>
+            <h1 className="mt-3 text-3xl md:text-4xl font-bold text-[hsl(var(--primary-dark))]">
+              {course.title}
+            </h1>
+            <div className="mt-3 text-sm text-muted-foreground">
+              Por{" "}
+              <span className="font-medium text-[hsl(var(--primary-dark))]">
+                {course.volunteer?.full_name}
+              </span>{" "}
+              · {course.volunteer?.specialty}
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <StarRating value={rating.avg} readOnly size={18} />
+              <span className="text-sm text-muted-foreground">
+                {rating.count > 0 ? `${rating.avg.toFixed(1)} (${rating.count})` : "Sem avaliações"}
+              </span>
+            </div>
+          </div>
+
+          {profile && !isOwner && (
+            <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Flag className="h-4 w-4 mr-2" /> Reportar
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Reportar este curso</DialogTitle>
+                </DialogHeader>
+                <Textarea
+                  rows={4}
+                  placeholder="Descreva o motivo do reporte..."
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setReportOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleReport}>Enviar reporte</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         <div className="mt-8 aspect-video w-full rounded-2xl overflow-hidden bg-black shadow-[var(--shadow-soft)]">
@@ -135,23 +244,85 @@ export default function CursoDetalhes() {
               Este é seu curso.
             </div>
           )}
-          {isAluno && (
-            <Button
-              size="lg"
-              className="w-full md:w-auto"
-              disabled={enrolled}
-              onClick={handleEnroll}
-            >
-              {enrolled ? (
-                <>
-                  <CheckCircle2 className="h-5 w-5 mr-2" /> Você já está inscrito
-                </>
-              ) : (
-                "Inscrever-se"
-              )}
+          {isAluno && !enrolled && (
+            <Button size="lg" className="w-full md:w-auto" onClick={handleEnroll}>
+              Inscrever-se
             </Button>
           )}
+          {isAluno && enrolled && (
+            <div className="rounded-xl border border-primary/30 bg-secondary/40 p-4 flex items-center text-[hsl(var(--primary-dark))] font-medium">
+              <CheckCircle2 className="h-5 w-5 mr-2" /> Você está inscrito neste curso
+            </div>
+          )}
         </div>
+
+        {/* Avaliação - apenas inscritos */}
+        {isAluno && enrolled && (
+          <section className="mt-10 rounded-2xl border border-border p-6 bg-background shadow-[var(--shadow-card)]">
+            <h2 className="text-lg font-semibold text-[hsl(var(--primary-dark))]">
+              Sua avaliação
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Dê de 1 a 5 estrelas para este curso.
+            </p>
+            <div className="mt-3">
+              <StarRating value={rating.mine || 0} onChange={handleRate} size={28} />
+            </div>
+          </section>
+        )}
+
+        {/* Comentários */}
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold text-[hsl(var(--primary-dark))] flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" /> Comentários ({comments.length})
+          </h2>
+
+          {isAluno && enrolled ? (
+            <form onSubmit={handleComment} className="mt-4 space-y-2">
+              <Textarea
+                rows={3}
+                placeholder="Compartilhe sua experiência..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <Button type="submit" size="sm" disabled={!newComment.trim()}>
+                Publicar comentário
+              </Button>
+            </form>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {isAluno
+                ? "Inscreva-se neste curso para deixar um comentário."
+                : "Apenas alunos inscritos podem comentar."}
+            </p>
+          )}
+
+          <div className="mt-6 space-y-4">
+            {comments.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Nenhum comentário ainda. Seja o primeiro!
+              </p>
+            )}
+            {comments.map((c) => (
+              <div
+                key={c.id}
+                className="border border-border rounded-xl p-4 bg-background"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="font-medium text-sm text-[hsl(var(--primary-dark))]">
+                    {c.user?.full_name || "Usuário"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(c.created_at).toLocaleDateString("pt-BR")}
+                  </p>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground whitespace-pre-line">
+                  {c.content}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
     </div>
   );

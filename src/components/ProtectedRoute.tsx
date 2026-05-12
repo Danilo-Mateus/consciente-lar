@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserType } from "@/lib/mockDb";
+import { UserType } from "@/utils/supabase";
 
 interface Props {
   children: JSX.Element;

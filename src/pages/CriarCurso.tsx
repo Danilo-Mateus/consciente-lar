@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuth } from "@/contexts/AuthContext";
-import { Category, mockDb } from "@/lib/mockDb";
+import { Category } from "@/utils/supabase";
+import { createCourse } from "@/services/courses";
 
 const CATEGORIES: Category[] = [
   "Pré-adoção",
@@ -33,18 +34,18 @@ export default function CriarCurso() {
   const [extra, setExtra] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!category) return toast.error("Selecione uma categoria.");
     setLoading(true);
     try {
-      mockDb.createCourse({
+      await createCourse({
         volunteer_id: profile!.id,
         title,
         description,
         category,
         video_url: videoUrl,
-        extra_material: extra || undefined,
+        extra_material: extra || null,
       });
       toast.success("Curso publicado com sucesso!");
       navigate("/dashboard-voluntario");
