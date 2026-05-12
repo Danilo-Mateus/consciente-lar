@@ -1,130 +1,76 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-// IMPORTANTE: Configure estas variáveis com as credenciais do seu projeto Supabase
-// Você pode encontrá-las em: https://supabase.com/dashboard/project/_/settings/api
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env quando for conectar.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "placeholder-anon-key";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('❌ Supabase não configurado. Verifique suas variáveis de ambiente:');
-    console.error('VITE_SUPABASE_URL:', supabaseUrl);
-    console.error('VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Presente' : '❌ Ausente');
-    throw new Error('Missing Supabase environment variables');
+if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+  console.warn(
+    "⚠️ Supabase ainda não conectado. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY."
+  );
 }
-
-console.log('✅ Supabase configurado com sucesso!');
-console.log('URL:', supabaseUrl);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Definição dos tipos do banco de dados do Constroi Vínculo
-export type Database = {
-    public: {
-        Tables: {
-            profiles: {
-                Row: {
-                    id: string;
-                    email: string;
-                    full_name: string;
-                    user_type: 'volunteer' | 'aluno';
-                    cpf: string;
-                    specialty: string | null;
-                    institution_id: number | null;
-                    created_at: string;
-                };
-                Insert: {
-                    id?: string;
-                    email: string;
-                    full_name: string;
-                    user_type: 'volunteer' | 'aluno';
-                    cpf: string;
-                    specialty?: string | null;
-                    institution_id?: number | null;
-                    created_at?: string;
-                };
-                Update: {
-                    id?: string;
-                    email?: string;
-                    full_name?: string;
-                    user_type?: 'volunteer' | 'aluno';
-                    cpf?: string;
-                    specialty?: string | null;
-                    institution_id?: number | null;
-                    created_at?: string;
-                };
-            };
-            institutions: {
-                Row: {
-                    id: number;
-                    cnpj: string;
-                    nome_fantasia: string;
-                    created_at: string;
-                };
-                Insert: {
-                    id?: number;
-                    cnpj: string;
-                    nome_fantasia: string;
-                    created_at?: string;
-                };
-                Update: {
-                    id?: number;
-                    cnpj?: string;
-                    nome_fantasia?: string;
-                    created_at?: string;
-                };
-            };
-            courses: {
-                Row: {
-                    id: number;
-                    volunteer_id: string;
-                    title: string;
-                    description: string;
-                    category: 'Pré-adoção' | 'Pós-adoção' | 'Acolhimento Institucional' | 'Aspectos Jurídicos';
-                    video_url: string;
-                    extra_material: string | null;
-                    created_at: string;
-                };
-                Insert: {
-                    id?: number;
-                    volunteer_id: string;
-                    title: string;
-                    description: string;
-                    category: 'Pré-adoção' | 'Pós-adoção' | 'Acolhimento Institucional' | 'Aspectos Jurídicos';
-                    video_url: string;
-                    extra_material?: string | null;
-                    created_at?: string;
-                };
-                Update: {
-                    id?: number;
-                    volunteer_id?: string;
-                    title?: string;
-                    description?: string;
-                    category?: 'Pré-adoção' | 'Pós-adoção' | 'Acolhimento Institucional' | 'Aspectos Jurídicos';
-                    video_url?: string;
-                    extra_material?: string | null;
-                    created_at?: string;
-                };
-            };
-            enrollments: {
-                Row: {
-                    id: number;
-                    alumni_id: string;
-                    course_id: number;
-                    enrolled_at: string;
-                };
-                Insert: {
-                    id?: number;
-                    alumni_id: string;
-                    course_id: number;
-                    enrolled_at?: string;
-                };
-                Update: {
-                    id?: number;
-                    alumni_id?: string;
-                    course_id?: number;
-                    enrolled_at?: string;
-                };
-            };
-        };
-    };
-};
+export type UserType = "volunteer" | "aluno";
+export type Category =
+  | "Pré-adoção"
+  | "Pós-adoção"
+  | "Acolhimento Institucional"
+  | "Aspectos Jurídicos";
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  user_type: UserType;
+  cpf: string;
+  specialty?: string | null;
+  institution_id?: number | null;
+  created_at: string;
+}
+
+export interface Course {
+  id: number;
+  volunteer_id: string;
+  title: string;
+  description: string;
+  category: Category;
+  video_url: string;
+  extra_material?: string | null;
+  created_at: string;
+  volunteer?: { full_name: string; specialty?: string | null };
+}
+
+export interface Enrollment {
+  id: number;
+  alumni_id: string;
+  course_id: number;
+  enrolled_at: string;
+  course?: Course;
+}
+
+export interface Rating {
+  id: number;
+  course_id: number;
+  user_id: string;
+  stars: number;
+  created_at: string;
+}
+
+export interface Comment {
+  id: number;
+  course_id: number;
+  user_id: string;
+  content: string;
+  created_at: string;
+  user?: { full_name: string };
+}
+
+export interface Report {
+  id: number;
+  course_id: number;
+  user_id: string;
+  reason: string;
+  created_at: string;
+}
