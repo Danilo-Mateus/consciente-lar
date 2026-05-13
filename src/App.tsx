@@ -10,6 +10,7 @@ import Login from "./pages/Login.tsx";
 import Cadastro from "./pages/Cadastro.tsx";
 import DashboardVoluntario from "./pages/DashboardVoluntario.tsx";
 import CriarCurso from "./pages/CriarCurso.tsx";
+import EditarCurso from "./pages/EditarCurso.tsx";
 import Catalogo from "./pages/Catalogo.tsx";
 import CursoDetalhes from "./pages/CursoDetalhes.tsx";
 import MeusCursos from "./pages/MeusCursos.tsx";
