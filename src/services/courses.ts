@@ -35,6 +35,17 @@ export async function createCourse(input: Omit<Course, "id" | "created_at" | "vo
   return data as Course;
 }
 
+export async function updateCourse(id: number, input: Partial<Omit<Course, "id" | "created_at" | "volunteer_id">>) {
+  const { data, error } = await supabase.from("courses").update(input).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Course;
+}
+
+export async function deleteCourse(id: number) {
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  if (error) throw error;
+}
+
 export async function myCourses(volunteerId: string): Promise<Course[]> {
   const { data, error } = await supabase
     .from("courses")
