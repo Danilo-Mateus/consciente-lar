@@ -46,6 +46,14 @@ const App = () => (
               }
             />
             <Route
+              path="/editar-curso/:id"
+              element={
+                <ProtectedRoute allow="volunteer">
+                  <EditarCurso />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/catalogo"
               element={
                 <ProtectedRoute allow="aluno">
