@@ -141,7 +141,7 @@ export async function addComment(userId: string, courseId: number, content: stri
   if (error) throw error;
 }
 
-// ---- Reports ----
+
 export async function reportCourse(userId: string, courseId: number, reason: string) {
   const { error } = await supabase
     .from("reports")

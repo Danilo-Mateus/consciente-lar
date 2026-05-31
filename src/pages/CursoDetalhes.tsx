@@ -93,7 +93,7 @@ useEffect(() => {
         <main className="flex-1 container py-12 text-center">
           <p className="text-muted-foreground">Carregando curso...</p>
           <Button className="mt-4" asChild>
-            <Link to="/catalogo">Voltar ao catálogo</Link>
+            <Link to="/catalogo">voltar ao catálogo</Link>
           </Button>
         </main>
       </div>

@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const userProfile = await fetchProfile(authData.user.id);
-      if (!userProfile) throw new Error("Erro ao carregar perfil");
+      if (!userProfile) throw new Error("Erro ao carregar ");
 
       setProfile(userProfile);
       return userProfile;
