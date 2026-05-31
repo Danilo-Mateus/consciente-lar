@@ -101,16 +101,37 @@ export async function rateCourse(userId: string, courseId: number, stars: number
     .upsert({ user_id: userId, course_id: courseId, stars }, { onConflict: "user_id,course_id" });
   if (error) throw error;
 }
-
-// ---- Comments ----
+export async function getVolunteerEmail(volunteerId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", volunteerId)
+    .single();
+  return data?.email || null;
+}
 export async function listComments(courseId: number): Promise<Comment[]> {
   const { data, error } = await supabase
     .from("comments")
-    .select("*, user:profiles!comments_user_id_fkey(full_name)")
+    .select("*")
     .eq("course_id", courseId)
     .order("created_at", { ascending: false });
-  if (error) return [];
-  return (data || []) as Comment[];
+  if (error) throw error;
+
+  const comments = (data || []) as Comment[];
+
+  // Busca os nomes dos usuários separadamente
+  const userIds = [...new Set(comments.map((c) => c.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("id", userIds);
+
+  return comments.map((c) => ({
+    ...c,
+    user: profiles?.find((p) => p.id === c.user_id)
+      ? { full_name: profiles.find((p) => p.id === c.user_id)!.full_name }
+      : undefined,
+  }));
 }
 
 export async function addComment(userId: string, courseId: number, content: string) {

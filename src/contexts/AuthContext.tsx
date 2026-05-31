@@ -29,14 +29,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
     try {
-      const { data, error } = await supabase
+      const timeout = new Promise<null>((resolve) =>
+        setTimeout(() => {
+          resolve(null);
+        }, 10000)
+      );
+
+      const query = supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .single()
+        .then(({ data, error }) => {
+          if (error) throw error;
+          return data as Profile;
+        });
 
-      if (error) throw error;
-      return data as Profile;
+      return await Promise.race([query, timeout]);
     } catch (error) {
       console.error("Error fetching profile:", error);
       return null;
@@ -46,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleInstitution = async (institution?: { cnpj: string; nome_fantasia: string }) => {
     if (!institution) return null;
 
-    // Verifica se instituição já existe
     const { data: existing } = await supabase
       .from("institutions")
       .select("id")
@@ -55,13 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (existing) return existing.id;
 
-    // Cria nova instituição
     const { data: newInst, error } = await supabase
       .from("institutions")
-      .insert([{
-        cnpj: institution.cnpj,
-        nome_fantasia: institution.nome_fantasia
-      }])
+      .insert([{ cnpj: institution.cnpj, nome_fantasia: institution.nome_fantasia }])
       .select()
       .single();
 
@@ -70,34 +74,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
-      setLoading(true);
-
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id);
-        setProfile(userProfile);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && mounted) {
+          const userProfile = await fetchProfile(session.user.id);
+          if (mounted) setProfile(userProfile);
+        }
+      } catch (e) {
+        console.error("initAuth error:", e);
+      } finally {
+        if (mounted) setLoading(false);
       }
-
-      setLoading(false);
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!mounted) return;
         if (session?.user) {
-          const userProfile = await fetchProfile(session.user.id);
-          setProfile(userProfile);
+          setProfile((current) => {
+            if (current?.id === session.user!.id) return current;
+            fetchProfile(session.user!.id).then((p) => {
+              if (mounted) setProfile(p);
+            });
+            return current;
+          });
         } else {
-          setProfile(null);
+          if (mounted) setProfile(null);
         }
-        setLoading(false);
       }
     );
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -125,13 +138,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (input: SignUpInput): Promise<Profile> => {
     try {
-      // Processar instituição se for voluntário
       let institution_id = null;
-      if (input.user_type === 'volunteer' && input.institution) {
+      if (input.user_type === "volunteer" && input.institution) {
         institution_id = await handleInstitution(input.institution);
       }
 
-      // Criar usuário no Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: input.email,
         password: input.password,
@@ -148,7 +159,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
-      // Atualizar o perfil com institution_id se necessário
       if (institution_id) {
         const { error: updateError } = await supabase
           .from("profiles")
@@ -158,7 +168,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (updateError) throw updateError;
       }
 
-      // Buscar o perfil criado
       const userProfile = await fetchProfile(authData.user.id);
       if (!userProfile) throw new Error("Erro ao carregar perfil");
 

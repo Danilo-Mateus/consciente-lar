@@ -9,7 +9,11 @@ interface Props {
 
 export default function ProtectedRoute({ children, allow }: Props) {
   const { profile, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return (
+  <div className="min-h-screen flex items-center justify-center">
+    <p className="text-muted-foreground">Carregando...</p>
+  </div>
+);
   if (!profile) return <Navigate to="/login" replace />;
   if (allow && profile.user_type !== allow) {
     return (

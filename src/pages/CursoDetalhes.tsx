@@ -5,8 +5,10 @@ import { CheckCircle2, Flag, MessageSquare } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { getVolunteerEmail } from "@/services/courses";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -27,6 +29,8 @@ import {
   reportCourse,
 } from "@/services/courses";
 
+
+
 function toEmbed(url: string) {
   try {
     const u = new URL(url);
@@ -45,7 +49,9 @@ export default function CursoDetalhes() {
   const courseId = Number(id);
   const [course, setCourse] = useState<Course | null>(null);
   const [enrolled, setEnrolled] = useState(false);
-  const [rating, setRating] = useState<{ avg: number; count: number; mine?: number }>({
+  const [volunteerEmail, setVolunteerEmail] = useState<string | null>(null);
+  const [rating, setRating] = useState<{ avg: number; count: number; 
+    mine?: number }>({
     avg: 0,
     count: 0,
   });
@@ -53,15 +59,27 @@ export default function CursoDetalhes() {
   const [newComment, setNewComment] = useState("");
   const [reportReason, setReportReason] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
-
+useEffect(() => {
+  console.log("courseId:", courseId, "isFinite:", Number.isFinite(courseId));
+  if (!Number.isFinite(courseId)) return;
+  refresh();
+}, [courseId, profile?.id]);
   const refresh = async () => {
+  try {
     const c = await getCourse(courseId);
+    console.log("curso:", c);
     setCourse(c);
+    if (c) {
+      const email = await getVolunteerEmail(c.volunteer_id);
+      setVolunteerEmail(email);
+    }
     if (profile) setEnrolled(await isEnrolled(profile.id, courseId));
     setRating(await getRatings(courseId));
     setComments(await listComments(courseId));
-  };
-
+  } catch (err) {
+    console.error("erro no refresh:", err);
+  }
+};
   useEffect(() => {
     if (!Number.isFinite(courseId)) return;
     refresh();
@@ -208,6 +226,46 @@ export default function CursoDetalhes() {
             {course.description}
           </p>
         </section>
+        {volunteerEmail && (
+  <Dialog>
+    <DialogTrigger asChild>
+      <Button variant="outline" className="mt-4">
+        ✉️ Entrar em contato
+      </Button>
+    </DialogTrigger>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Fale com {course.volunteer?.full_name}</DialogTitle>
+      </DialogHeader>
+      <p className="text-sm text-muted-foreground">
+        Envie sua dúvida ou consulte os valores com o voluntário.
+      </p>
+      <div className="space-y-3 mt-2">
+        <input
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          placeholder="Seu nome"
+        />
+        <input
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+          placeholder="Seu email"
+        />
+        <Textarea
+          rows={4}
+          placeholder="Escreva o motivo do seu contato"
+        />
+      </div>
+      <DialogFooter>
+        <DialogClose asChild>
+          <Button
+            onClick={() => toast.success("Mensagem enviada! Em breve você receberá uma resposta no seu email.")}
+          >
+            Enviar mensagem
+          </Button>
+        </DialogClose>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+)}
 
         {materials.length > 0 && (
           <section className="mt-8">
